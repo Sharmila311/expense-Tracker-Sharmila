@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Expense Tracker</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar px-4 py-3">
+    <div class="container d-flex justify-content-between align-items-center">
+        <h4>💜 Expense Tracker</h4>
+        <button onclick="toggleDarkMode()" class="btn btn-light btn-sm">🌙</button>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <div class="row g-4">
+
+        <!-- FORM -->
+        <div class="col-md-4">
+            <div class="card p-4">
+                <h5>Add Expense</h5>
+
+                <form method="POST" action="/add">
+
+                    <input type="number" name="amount" class="form-control mb-3" placeholder="Amount" required>
+
+                    <input type="date" name="date" class="form-control mb-3" required>
+
+                    <select name="category" class="form-control mb-3">
+                        <option>Food</option>
+                        <option>Travel</option>
+                        <option>Shopping</option>
+                        <option>Others</option>
+                    </select>
+
+                    <input type="text" name="description" class="form-control mb-3" placeholder="Description">
+
+                    <button class="btn btn-primary w-100">Add</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="col-md-8">
+
+            <!-- STATS -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="card p-3 text-center">
+                        <h6>Total Spending</h6>
+                        <h3>₹ <span id="totalValue">{{ total }}</span></h3>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card p-3 text-center">
+                        <h6>Total Entries</h6>
+                        <h3>{{ expenses|length }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS -->
+            <div class="row g-3 mb-3">
+
+                <div class="col-md-6">
+                    <div class="card p-3 text-center">
+                        <h6>Pie Chart</h6>
+                        <div class="chart-box">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card p-3 text-center">
+                        <h6>Bar Chart</h6>
+                        <div class="chart-box">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- FULL WIDTH SECTION -->
+            <div class="full-width-section">
+
+                <!-- SEARCH -->
+                <div class="card p-3 mb-3 search-card">
+                    <h6 class="mb-2">Search Expense</h6>
+                    <input type="text" id="searchInput"
+                           class="form-control"
+                           placeholder="Search expenses..."
+                           onkeyup="searchTable()">
+                </div>
+
+                <!-- TABLE -->
+                <div class="card p-3 table-card">
+                    <h6 class="mb-3">Expense List</h6>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover w-100" id="expenseTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense[4] }}</td>
+                                    <td>{{ expense[3] }}</td>
+                                    <td>{{ expense[2] }}</td>
+                                    <td>₹ {{ expense[1] }}</td>
+                                    <td>
+                                        <a href="/delete/{{ expense[0] }}" class="text-danger">Delete</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const labels = JSON.parse('{{ labels | tojson | safe }}');
+const values = JSON.parse('{{ values | tojson | safe }}');
+
+const colors = ['#7c3aed','#a78bfa','#c084fc','#d8b4fe','#8b5cf6'];
+
+/* PIE CHART */
+new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: values,
+            backgroundColor: colors
+        }]
+    }
+});
+
+/* BAR CHART */
+new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: values,
+            backgroundColor: colors
+        }]
+    },
+    options: {
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+
+/* SEARCH */
+function searchTable() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll("#expenseTable tbody tr");
+
+    rows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? "" : "none";
+    });
+}
+
+/* DARK MODE */
+function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
+}
+
+/* COUNTER ANIMATION */
+function animateCounter(id, target) {
+    let count = 0;
+    let step = target / 100;
+
+    let interval = setInterval(() => {
+        count += step;
+        if (count >= target) {
+            count = target;
+            clearInterval(interval);
+        }
+        document.getElementById(id).innerText = Math.floor(count);
+    }, 10);
+}
+
+animateCounter("totalValue", parseInt("{{ total }}"));
+</script>
+
+</body>
+</html>
